@@ -1,0 +1,257 @@
+{
+  "caseId": "case_rag_001_happy",
+  "exportedAt": "2026-09-26T05:07:10.698Z",
+  "verification": {
+    "valid": true,
+    "eventCount": 10,
+    "caseId": "case_rag_001_happy",
+    "verifiedAt": "2026-09-26T05:07:10.696Z"
+  },
+  "events": [
+    {
+      "eventId": "evt_1790399230684_1hpj5l",
+      "sequence": 1,
+      "timestamp": "2026-09-26T05:07:10.684Z",
+      "caseId": "case_rag_001_happy",
+      "actor": {
+        "id": "clinician_chen",
+        "role": "PHYSICIAN",
+        "displayName": "Dr. Robert Chen"
+      },
+      "action": "CASE_CREATED",
+      "resource": "case_rag_001_happy",
+      "dataAccessed": [
+        "patientName",
+        "query",
+        "clinicalContext"
+      ],
+      "status": "SUCCESS",
+      "details": {
+        "patientRef": "PATIENT_REF_001",
+        "category": "happy_path"
+      },
+      "prevHash": "GENESIS_0000000000000000000000000000000000000000000000000000000000000000",
+      "hash": "7be6343c0fba83b802a456e49ff63b5aa5dd8c92a0fcc9ca8e52255da2e61855"
+    },
+    {
+      "eventId": "evt_1790399230686_og29jz",
+      "sequence": 2,
+      "timestamp": "2026-09-26T05:07:10.686Z",
+      "caseId": "case_rag_001_happy",
+      "actor": {
+        "id": "clinician_chen",
+        "role": "PHYSICIAN",
+        "displayName": "Dr. Robert Chen"
+      },
+      "action": "QUERY_SUBMITTED",
+      "resource": "query_sepsis_firstline",
+      "dataAccessed": [
+        "query"
+      ],
+      "status": "SUCCESS",
+      "details": {
+        "topic": "Sepsis initial empiric antibiotic coverage & fluid bolus"
+      },
+      "prevHash": "7be6343c0fba83b802a456e49ff63b5aa5dd8c92a0fcc9ca8e52255da2e61855",
+      "hash": "2174a760f90a13764775bbb1284e21e39ff7c6be8113f4cf0d4d7f784e0abc1b"
+    },
+    {
+      "eventId": "evt_1790399230686_nbv395",
+      "sequence": 3,
+      "timestamp": "2026-09-26T05:07:10.686Z",
+      "caseId": "case_rag_001_happy",
+      "actor": {
+        "id": "system_retrieval_guard",
+        "role": "SYSTEM",
+        "displayName": "Enterprise RBAC Guard"
+      },
+      "action": "ACCESS_CONTROL_ENFORCED",
+      "resource": "corpus_access_boundary",
+      "dataAccessed": [
+        "userRole"
+      ],
+      "status": "SUCCESS",
+      "details": {
+        "roleEnforced": "PHYSICIAN",
+        "totalCorpusDocs": 5,
+        "authorizedDocs": 5,
+        "blockedDocs": 0
+      },
+      "prevHash": "2174a760f90a13764775bbb1284e21e39ff7c6be8113f4cf0d4d7f784e0abc1b",
+      "hash": "4d2d1a281bb5f8e4483b72b9d724dc3836db362a568add647a665a27ef07de3a"
+    },
+    {
+      "eventId": "evt_1790399230687_fb8985",
+      "sequence": 4,
+      "timestamp": "2026-09-26T05:07:10.687Z",
+      "caseId": "case_rag_001_happy",
+      "actor": {
+        "id": "system_retriever",
+        "role": "SYSTEM",
+        "displayName": "ClinicalRelay Retriever"
+      },
+      "action": "RETRIEVAL_FILTERED",
+      "resource": "corpus_hybrid_index",
+      "dataAccessed": [
+        "doc_guideline_sepsis_2024",
+        "doc_formulary_table_2024",
+        "doc_sop_ed_triage"
+      ],
+      "status": "SUCCESS",
+      "details": {
+        "passagesRetrieved": 4,
+        "topClause": "Guideline-2024-1.1"
+      },
+      "prevHash": "4d2d1a281bb5f8e4483b72b9d724dc3836db362a568add647a665a27ef07de3a",
+      "hash": "a5bdd7d3b37fee3556fabe1671a126aae166f17c71e1e0bef998859f46d6d7b7"
+    },
+    {
+      "eventId": "evt_1790399230689_zcu9sc",
+      "sequence": 5,
+      "timestamp": "2026-09-26T05:07:10.689Z",
+      "caseId": "case_rag_001_happy",
+      "actor": {
+        "id": "system_minimizer",
+        "role": "SYSTEM",
+        "displayName": "Data Minimizer"
+      },
+      "action": "AI_DATA_ACCESSED",
+      "resource": "ai_prompt_builder",
+      "dataAccessed": [
+        "query",
+        "clinicalContext",
+        "userRole"
+      ],
+      "status": "SUCCESS",
+      "details": {
+        "allowedFieldsCount": 3,
+        "withheldFieldsCount": 3
+      },
+      "prevHash": "a5bdd7d3b37fee3556fabe1671a126aae166f17c71e1e0bef998859f46d6d7b7",
+      "hash": "9637ada4bec50a61b7fec941828e1a44dcffb78675371fa5da78ced9d3a21f27"
+    },
+    {
+      "eventId": "evt_1790399230689_8x0wds",
+      "sequence": 6,
+      "timestamp": "2026-09-26T05:07:10.689Z",
+      "caseId": "case_rag_001_happy",
+      "actor": {
+        "id": "ai_engine",
+        "role": "AI_SYSTEM",
+        "displayName": "ClinicalRelay Engine"
+      },
+      "action": "AI_RESULT_GENERATED",
+      "resource": "ai_result_envelope_001",
+      "dataAccessed": [
+        "citations",
+        "summary",
+        "keyInformation"
+      ],
+      "ai": {
+        "mode": "MOCK",
+        "provider": "deterministic_mock",
+        "model": "clinical_enterprise_rag",
+        "promptVersion": "v2.0.0-rag"
+      },
+      "status": "SUCCESS",
+      "details": {
+        "citationsCount": 4,
+        "contradictionsFound": 0,
+        "isRefusal": false,
+        "uncertainty": "LOW",
+        "latencyMs": 280
+      },
+      "prevHash": "9637ada4bec50a61b7fec941828e1a44dcffb78675371fa5da78ced9d3a21f27",
+      "hash": "e9c02c245674778c4dbdc74edd63b232a6cdcccb2f258331cf2ba549287310ca"
+    },
+    {
+      "eventId": "evt_1790399230691_quylqb",
+      "sequence": 7,
+      "timestamp": "2026-09-26T05:07:10.691Z",
+      "caseId": "case_rag_001_happy",
+      "actor": {
+        "id": "clinician_lead",
+        "role": "REVIEWER",
+        "displayName": "Dr. Sarah Vance (Attending Reviewer)"
+      },
+      "action": "HUMAN_REVIEW_STARTED",
+      "resource": "review_panel_001",
+      "dataAccessed": [
+        "summary",
+        "citations",
+        "suggestedNextStep"
+      ],
+      "status": "SUCCESS",
+      "details": {
+        "mode": "interactive_diff"
+      },
+      "prevHash": "e9c02c245674778c4dbdc74edd63b232a6cdcccb2f258331cf2ba549287310ca",
+      "hash": "d8e0d21cfb3a3cd0604fa65c6f05a5a16a93500c5591248bb54fca69a0ffcc25"
+    },
+    {
+      "eventId": "evt_1790399230692_3vu8xh",
+      "sequence": 8,
+      "timestamp": "2026-09-26T05:07:10.692Z",
+      "caseId": "case_rag_001_happy",
+      "actor": {
+        "id": "clinician_lead",
+        "role": "REVIEWER",
+        "displayName": "Dr. Sarah Vance (Attending Reviewer)"
+      },
+      "action": "HUMAN_EDITED",
+      "resource": "review_edits_001",
+      "dataAccessed": [
+        "suggestedNextStep"
+      ],
+      "status": "SUCCESS",
+      "details": {
+        "fieldEdited": "suggestedNextStep",
+        "diffApplied": "Added explicit stat lactate remeasurement at 2h window"
+      },
+      "prevHash": "d8e0d21cfb3a3cd0604fa65c6f05a5a16a93500c5591248bb54fca69a0ffcc25",
+      "hash": "86429b34f0da6444c7ed33406b7b16e880d0d3e436e222922871bce99f7f722c"
+    },
+    {
+      "eventId": "evt_1790399230693_2hysg4",
+      "sequence": 9,
+      "timestamp": "2026-09-26T05:07:10.693Z",
+      "caseId": "case_rag_001_happy",
+      "actor": {
+        "id": "clinician_lead",
+        "role": "REVIEWER",
+        "displayName": "Dr. Sarah Vance (Attending Reviewer)"
+      },
+      "action": "HUMAN_APPROVED",
+      "resource": "review_decision_001",
+      "dataAccessed": [],
+      "status": "SUCCESS",
+      "details": {
+        "decision": "EDITED_AND_APPROVED",
+        "reason": "Verified against 2024 Sepsis Guideline section 1.1 and Antimicrobial Formulary Table 1."
+      },
+      "prevHash": "86429b34f0da6444c7ed33406b7b16e880d0d3e436e222922871bce99f7f722c",
+      "hash": "c555ffb063de940725ab8656b982a07ccde3130f3b723a9076c94d23c230559e"
+    },
+    {
+      "eventId": "evt_1790399230695_lasnrq",
+      "sequence": 10,
+      "timestamp": "2026-09-26T05:07:10.695Z",
+      "caseId": "case_rag_001_happy",
+      "actor": {
+        "id": "clinician_lead",
+        "role": "REVIEWER",
+        "displayName": "Dr. Sarah Vance (Attending Reviewer)"
+      },
+      "action": "FINAL_ACTION_RECORDED",
+      "resource": "order_bundle_sepsis_001",
+      "dataAccessed": [],
+      "status": "SUCCESS",
+      "details": {
+        "actionType": "CLINICAL_ORDER_APPROVED",
+        "summary": "Piperacillin-Tazobactam 4.5g IV q8h + Vancomycin AUC load + 30mL/kg crystalloids authorized."
+      },
+      "prevHash": "c555ffb063de940725ab8656b982a07ccde3130f3b723a9076c94d23c230559e",
+      "hash": "3b29d2956ac0acf094aebd7dc969333481460bfa91fb549b244dc7d1f76200a8"
+    }
+  ]
+}
