@@ -22,40 +22,56 @@ Unlike generic chatbot interfaces, RelayMD treats clinical retrieval as a strict
 ## 📐 System Architecture
 
 ```mermaid
-flowchart TB
-    subgraph UI ["Clinician Frontend (Next.js 15 App Router)"]
-        DOC["🩺 Attending Physician View<br/>• Clinical RAG Inquiries<br/>• 1-Click Grounded Citations<br/>• Directives Dispatch"]
-        NURSE["👩‍⚕️ Bedside Nurse View<br/>• Patient Presentation<br/>• MAR Orders Dropdown<br/>• 1-Click Dose Administration"]
-        AUDIT_UI["🛡️ Audit & Safety Ledger<br/>• SHA-256 Hash Verification<br/>• Cryptographic Bundle Export"]
+graph TD
+    %% Styling
+    classDef roleStyle fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0369a1;
+    classDef gateStyle fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e;
+    classDef dbStyle fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#5b21b6;
+    classDef ragStyle fill:#ccfbf1,stroke:#0d9488,stroke-width:2px,color:#115e59;
+    classDef actionStyle fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#166534;
+    classDef auditStyle fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#991b1b;
+
+    %% 1. Users
+    DOC["🩺 Doctor (Dr. Rivera)<br/>Asks Questions & Prescribes"]:::roleStyle
+    NURSE["👩‍⚕️ Nurse (Nurse Priya)<br/>Acknowledges Directives & Administers Dose"]:::roleStyle
+
+    %% 2. RBAC Gate
+    RBAC{"🔐 RBAC Security Filter<br/>Role-Based Access Control"}:::gateStyle
+
+    %% 3. PostgreSQL Database
+    subgraph DATABASE ["🐘 PostgreSQL Database"]
+        CORPUS[("📚 Guidelines & Formularies<br/>Chunked with Clause IDs")]:::dbStyle
+        PATIENTS[("👤 Patient EHR & Orders<br/>Prescriptions & Directives")]:::dbStyle
     end
 
-    subgraph API ["Application & Security Middleware"]
-        RBAC["🔐 Retrieval-Stage RBAC & Delimiter Defense<br/>• Role Enforcement (PHYSICIAN vs NURSE)<br/>• Prompt Isolation Delimiters"]
-        RAG_ENGINE["🧠 Clinical RAG Pipeline<br/>• Multi-Document Fusion (Guidelines + Formulary)<br/>• Cross-Version Contradiction Detection<br/>• Loud Refusal on Missing Evidence"]
-        API_ROUTES["⚡ RESTful API Endpoints<br/>• /api/foundation/cases<br/>• /api/foundation/corpus<br/>• /api/foundation/prescriptions<br/>• /api/foundation/messages"]
+    %% 4. RAG Engine
+    subgraph RAG ["🧠 Clinical RAG Pipeline"]
+        SEARCH["🔍 Smart Search<br/>Finds Top-3 Relevant Clauses"]:::ragStyle
+        SAFETY{"⚠️ Safety Checks<br/>• Guideline Conflicts (2021 vs 2024)<br/>• Missing Trial Evidence?"}:::ragStyle
+        ANSWER["🤖 Grounded Answer<br/>With 1-Click Traceable Citations"]:::ragStyle
     end
 
-    subgraph DB ["PostgreSQL Relational Storage (healthcareapp)"]
-        T_CASES[("cases<br/>• Patient Intake<br/>• Clinical Context<br/>• AI Synthesis")]
-        T_CORPUS[("corpus_documents<br/>• Clinical Guidelines (PDFs)<br/>• Formulary Tables<br/>• ICU SOPs")]
-        T_RX[("prescriptions<br/>• Medication & Dosage<br/>• SHA-256 Seals<br/>• Administration Logs")]
-        T_MSG[("doctor_messages<br/>• Bedside Directives<br/>• Target Nurse Name<br/>• Acknowledgment Receipts")]
-    end
+    %% 5. Clinical Workflow & Audit
+    PRESCRIPTION["✍️ Doctor Signs Prescription"]:::actionStyle
+    MAR["💉 Nurse MAR Sign-Off<br/>Administers Bedside Dose"]:::actionStyle
+    AUDIT["🔗 Tamper-Evident SHA-256 Ledger<br/>Continuous Cryptographic Hash Chain"]:::auditStyle
 
-    subgraph AUDIT ["Cryptographic Audit Chain"]
-        HASH_CHAIN["🔗 Append-Only SHA-256 Ledger<br/>Hash(N) = SHA256(Event_N + Hash_{N-1})<br/>• QUERY_SUBMITTED<br/>• RETRIEVAL_FILTERED<br/>• AI_RESULT_GENERATED<br/>• HUMAN_APPROVED<br/>• FINAL_ACTION_RECORDED"]
-    end
+    %% Connections
+    DOC -->|Clinical Query| RBAC
+    NURSE -->|Inquiry| RBAC
 
-    DOC -->|Clinical Query| API_ROUTES
-    NURSE -->|Acknowledge / Administer| API_ROUTES
-    API_ROUTES --> RBAC
-    RBAC --> RAG_ENGINE
-    RAG_ENGINE <--> T_CORPUS
-    API_ROUTES <--> T_CASES
-    API_ROUTES <--> T_RX
-    API_ROUTES <--> T_MSG
-    API_ROUTES --> HASH_CHAIN
-    HASH_CHAIN --> AUDIT_UI
+    RBAC -->|Doctor: Full Access<br/>Nurse: General Care Only| SEARCH
+    CORPUS <-->|Indexed Chunks| SEARCH
+
+    SEARCH --> SAFETY
+    SAFETY -->|Conflict Tagged / Refusal Checked| ANSWER
+
+    ANSWER --> PRESCRIPTION
+    PRESCRIPTION -->|Stores Order| PATIENTS
+    PATIENTS -->|Loads Order into MAR Dropdown| MAR
+
+    PRESCRIPTION -->|Log Action| AUDIT
+    MAR -->|Log Administration| AUDIT
 ```
 
 ---
