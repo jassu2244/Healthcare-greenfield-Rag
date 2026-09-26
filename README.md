@@ -60,40 +60,122 @@ flowchart TB
 
 ---
 
-## 🔄 End-to-End Clinical Data Flow
+---
+
+## 🧠 Theoretical RAG Architecture & Execution Pipeline
+
+The RelayMD Retrieval-Augmented Generation (RAG) pipeline is structured as an 8-stage safety-critical pipeline designed specifically for clinical environments. Unlike generic consumer RAG setups, it implements multi-layered security gates, versioned conflict detection, and tamper-evident audit verification.
+
+### Clinical RAG Pipeline Flow
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    actor Dr as 🩺 Dr. Sarah Rivera (Doctor)
-    participant UI as 💻 RelayMD Frontend
-    participant API as ⚙️ API / RAG Engine
-    participant DB as 🐘 PostgreSQL DB
-    actor Nurse as 👩‍⚕️ Nurse Priya Sharma (Nurse)
+flowchart TD
+    subgraph INGESTION ["1. Corpus Ingestion & Indexing"]
+        PDF["📄 Clinical Guidelines (PDFs)<br/>• 2024 Sepsis Protocol<br/>• 2021 Legacy Guidelines"]
+        FORM["📊 Formulary Tables<br/>• Antibiotic Dosing<br/>• Renal Adjustments"]
+        SOP["🔒 Restricted SOPs<br/>• ICU SEC-901 Narcotic Policy"]
+        
+        PARSE["⚙️ Chunking & Metadata Tagging<br/>• Document Version<br/>• Clause / Row Identifier<br/>• Role Access Permissions"]
+        
+        CORPUS_DB[("🐘 PostgreSQL Corpus Store<br/>corpus_documents")]
+        
+        PDF --> PARSE
+        FORM --> PARSE
+        SOP --> PARSE
+        PARSE --> CORPUS_DB
+    end
 
-    Note over UI: Patient Condition & Intake displayed (EHR Baseline)
-    Dr->>UI: Submits Clinical Query ("Recommended sepsis bundle...")
-    UI->>API: POST /cases/{id}/run-ai (Role: PHYSICIAN)
-    API->>DB: Query corpus_documents (Filter by Role RBAC)
-    DB-->>API: Return 2024 Guidelines + Formulary Table
-    API->>API: Evaluate evidence, check contradictions, cite clauses
-    API-->>UI: Grounded AI Output + 1-Click Citations + Verified Seal
-    
-    Dr->>UI: Reviews output & clicks "Approve & Prescribe"
-    UI->>API: POST /cases/{id}/final-action (Signed Order)
-    API->>DB: Insert into prescriptions & doctor_messages
-    API->>DB: Record SHA-256 Audit Event (HUMAN_APPROVED)
-    
-    Note over Nurse,UI: Nurse switches role to "Nurse Priya"
-    UI->>UI: Bedside Orders Dropdown alerts: 1 Pending Dose + 1 Directive
-    Nurse->>UI: Opens "Bedside Orders & MAR" Floating Dropdown
-    Nurse->>UI: Clicks "✓ Acknowledge Directive"
-    UI->>API: POST /messages (action: markRead)
-    Nurse->>UI: Clicks "💉 Administer & Sign Off"
-    UI->>API: POST /prescriptions/{id}/administer
-    API->>DB: Update prescriptions (Status: ADMINISTERED, AdministeredBy: Nurse Priya)
-    UI-->>Nurse: Green Verification Stamp: "✓ Administered at 02:45 PM"
+    subgraph QUERY_STAGE ["2. Query & Security Gating"]
+        QUERY["💬 Clinician Query + Context<br/>EHR presentation, vitals, patient inquiry"]
+        ROLE{"🔐 Retrieval-Stage RBAC Filter<br/>Check Clinician Role"}
+        
+        QUERY --> ROLE
+        ROLE -->|PHYSICIAN| ALLOW_ALL["✅ Access All Institutional Documents"]
+        ROLE -->|NURSE| FILTER_RESTRICTED["🛡️ Access General Care Documents<br/>Withhold Restricted ICU Policies"]
+    end
+
+    subgraph RETRIEVAL_STAGE ["3. Retrieval & Ranking"]
+        PASSAGES["📚 Permitted Passages Pool"]
+        SCORING["🔍 Hybrid Retrieval & Relevance Scoring<br/>• Lexical Keyword Matching<br/>• Passage Filtering & Ranking"]
+        TOP_K["📋 Top-K Clinical Passages Selected"]
+        
+        CORPUS_DB --> PASSAGES
+        ALLOW_ALL --> PASSAGES
+        FILTER_RESTRICTED --> PASSAGES
+        PASSAGES --> SCORING
+        SCORING --> TOP_K
+    end
+
+    subgraph ANALYSIS_STAGE ["4. Evidence Analysis & Contradiction Detection"]
+        CONFLICT{"⚠️ Version Conflict Analysis<br/>Compare Guideline Revisions"}
+        GATE{"🩺 Evidence Sufficiency Gate<br/>Sufficient Validated Evidence?"}
+        
+        TOP_K --> CONFLICT
+        CONFLICT -->|Conflicting Revisions Found| FLAG_CONFLICT["Flag Active vs Superseded Conflict<br/>e.g. 2021 Trough vs 2024 AUC Target"]
+        CONFLICT -->|No Conflict| GATE
+        FLAG_CONFLICT --> GATE
+    end
+
+    subgraph DECISION_STAGE ["5. Synthesis or Loud Refusal"]
+        GATE -->|No / Missing Evidence| REFUSAL["🚫 Loud Clinical Refusal<br/>• State Inability to Generate<br/>• Enumerate Missing Clinical Data<br/>• Flag High Uncertainty"]
+        GATE -->|Yes / Sufficient Evidence| DELIMITER["🛡️ Non-Executable Delimiter Wrapping<br/>Prompt Isolation: <<<DOCUMENT>>>...<<<END>>>"]
+        
+        DELIMITER --> SYNTHESIS["🤖 Grounded Clinical Synthesis<br/>• Direct Guideline Evidence Only<br/>• Zero Hallucination Policy<br/>• Structured Dosage & Timing"]
+        SYNTHESIS --> CITATIONS["📎 1-Click Traceable Citations<br/>Direct mapping to Clause & Table Row"]
+    end
+
+    subgraph AUDIT_STAGE ["6. Cryptographic Audit & Handover"]
+        AUDIT_LOG["🔗 Append-Only SHA-256 Chaining<br/>Hash(N) = SHA256(Event_N + Hash_{N-1})"]
+        REVIEW["👨‍⚕️ Clinician Review & Prescription Sign-Off"]
+        MAR["👩‍⚕️ Nurse Handover & Bedside MAR Administration"]
+        
+        REFUSAL --> AUDIT_LOG
+        CITATIONS --> AUDIT_LOG
+        AUDIT_LOG --> REVIEW
+        REVIEW --> MAR
+    end
 ```
+
+---
+
+### Detailed Stage-by-Stage RAG Methodology
+
+#### Stage 1: Heterogeneous Corpus Ingestion & Access Tagging
+- **Multi-Format Ingestion:** Ingests narrative guidelines, tabular antimicrobial formularies, and operational hospital SOPs into structured JSON representations.
+- **Granular Access Metadata:** Every document chunk is tagged with its authoritative revision year (`version: '2024'`), document type, and role authorization array (`allowedRoles: ['PHYSICIAN', 'NURSE']` vs `['PHYSICIAN']`).
+
+#### Stage 2: Retrieval-Stage RBAC Gating & Delimiter Defense
+- **Pre-Prompt Role Filtering:** Rather than filtering model responses post-hoc, the retrieval engine actively prunes unauthorized documents *before* they can enter the retrieval pool or LLM prompt. If a Bedside Nurse queries restricted narcotic titration policies (such as SEC-901), the document is excluded at the database retrieval level.
+- **Prompt Injection Immunity:** Passages inserted into the LLM context are encapsulated within strict non-executable boundary tags (`<<<DOCUMENT>>>...<<<END_DOCUMENT>>>`), preventing indirect prompt injection from malicious or corrupted EHR text.
+
+#### Stage 3: Hybrid Retrieval & Relevance Scoring
+- **Passage-Level Precision:** Retrieval matches against discrete clinical clauses and formulary rows rather than large generic pages, ensuring pinpoint citation accuracy.
+- **Top-K Window Curation:** Retains only high-scoring passages meeting threshold relevance, minimizing context pollution and focus degradation.
+
+#### Stage 4: Cross-Version Contradiction Detection
+- **Multi-Version Cross-Checking:** When multiple institutional guidelines address the same clinical condition (e.g. Surviving Sepsis Campaign 2021 vs. 2024 revisions), the engine evaluates both versions.
+- **Supersession Transparency:** Rather than blending contradictory guidance or silently picking one, the system explicitly flags the contradiction, cites both clauses, and highlights the supersession rationale.
+
+#### Stage 5: Evidence Sufficiency Gate & Loud Refusal
+- **Missing Information Check:** If a clinician's query concerns off-label indications, missing formulary rows, or unverified neonate therapies without grounded evidence, the model is strictly forbidden from extrapolating or guessing.
+- **Structured Refusal Contract:** Triggers a loud refusal with:
+  1. High uncertainty rating (`uncertainty: HIGH`).
+  2. Clear rationale explaining evidence limitations.
+  3. Structured checklist of required clinical trial data before an order can be approved.
+
+#### Stage 6: Grounded Generation & 1-Click Traceable Citations
+- **Zero-Speculation Synthesis:** Generates concise, guideline-grounded recommendations where every dosage, route, and interval is tied directly to a source passage.
+- **1-Click Inspector:** Clinicians can click any citation badge in the UI to immediately view the exact institutional guideline paragraph or formulary table row in an inspector modal.
+
+#### Stage 7: Tamper-Evident SHA-256 Audit Chaining
+- **Cryptographic Event Chain:** Every step in the RAG lifecycle generates an immutable audit record:
+  $$\text{Hash}_n = \text{SHA256}(\text{Event}_n + \text{Hash}_{n-1})$$
+- **Logged Events:** `QUERY_SUBMITTED` $\rightarrow$ `RETRIEVAL_FILTERED` $\rightarrow$ `AI_RESULT_GENERATED` $\rightarrow$ `HUMAN_APPROVED` $\rightarrow$ `FINAL_ACTION_RECORDED`.
+- **Exportable Legal Package:** 1-click export of a cryptographically sealed audit bundle with verified integrity stamps for clinical governance and compliance.
+
+#### Stage 8: Closed-Loop Human Review & Nurse Handover
+- **Human-in-the-Loop Governance:** AI outputs are draft-only. Physicians review, edit, and digitally sign prescriptions.
+- **Directives & MAR Integration:** Physician orders and precaution directives are dispatched to the assigned bedside nurse's floating Medication Administration Record (MAR) dropdown for bedside verification and sign-off.
 
 ---
 
